@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IoT Environment Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        background: #f4f6f9;
+        margin: 0;
+    }
+
+    header {
+        background: #1f2937;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        font-size: 26px;
+    }
+
+    .container {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        margin-top: 40px;
+        flex-wrap: wrap;
+    }
+
+    .card {
+        background: white;
+        width: 260px;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .gauge {
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        margin: 20px auto;
+        background: conic-gradient(#2563eb 0deg, #e5e7eb 0deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .inner {
+        width: 120px;
+        height: 120px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+
+    .value {
+        font-size: 30px;
+        font-weight: bold;
+        color: #2563eb;
+    }
+
+    .unit {
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    .chart-box {
+        width: 90%;
+        margin: 40px auto;
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+</style>
+</head>
+
+<body>
+
+<header>🌍 IoT Environment Monitoring Dashboard</header>
+
+<!-- Gauges -->
+<div class="container">
+
+    <div class="card">
+        <h2>Temperature</h2>
+        <div class="gauge" id="tempGauge">
+            <div class="inner">
+                <div class="value" id="temp">--</div>
+                <div class="unit">°C</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Humidity</h2>
+        <div class="gauge" id="humGauge">
+            <div class="inner">
+                <div class="value" id="humidity">--</div>
+                <div class="unit">%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Gas Level</h2>
+        <div class="gauge" id="gasGauge">
+            <div class="inner">
+                <div class="value" id="gas">--</div>
+                <div class="unit">PPM</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Charts -->
+<div class="chart-box"><canvas id="tempChart"></canvas></div>
+<div class="chart-box"><canvas id="humChart"></canvas></div>
+<div class="chart-box"><canvas id="gasChart"></canvas></div>
+
+<script>
+    function setGauge(id, value, max, color) {
+        let deg = (value / max) * 360;
+        document.getElementById(id).style.background =
+            `conic-gradient(${color} ${deg}deg, #e5e7eb ${deg}deg)`;
+    }
+
+    let labels = [];
+
+    const tempChart = new Chart(document.getElementById('tempChart'), {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Temperature (°C)', data: [], borderColor: 'red', tension: 0.3 }] }
+    });
+
+    const humChart = new Chart(document.getElementById('humChart'), {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Humidity (%)', data: [], borderColor: 'blue', tension: 0.3 }] }
+    });
+
+    const gasChart = new Chart(document.getElementById('gasChart'), {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Gas (PPM)', data: [], borderColor: 'green', tension: 0.3 }] }
+    });
+
+    function fetchData() {
+        fetch("/data")
+            .then(res => res.json())
+            .then(data => {
+                let t = Number(data.temp);
+                let h = Number(data.humidity);
+                let g = Number(data.gas);
+
+                document.getElementById("temp").innerText = t;
+                document.getElementById("humidity").innerText = h;
+                document.getElementById("gas").innerText = g;
+
+                setGauge("tempGauge", t, 50, "#ef4444");
+                setGauge("humGauge", h, 100, "#3b82f6");
+                setGauge("gasGauge", g, 800, "#22c55e");
+
+                let time = new Date().toLocaleTimeString();
+                labels.push(time);
+
+                tempChart.data.datasets[0].data.push(t);
+                humChart.data.datasets[0].data.push(h);
+                gasChart.data.datasets[0].data.push(g);
+
+                if (labels.length > 10) {
+                    labels.shift();
+                    tempChart.data.datasets[0].data.shift();
+                    humChart.data.datasets[0].data.shift();
+                    gasChart.data.datasets[0].data.shift();
+                }
+
+                tempChart.update();
+                humChart.update();
+                gasChart.update();
+            });
+    }
+
+    setInterval(fetchData, 2000);
+    fetchData();
+</script>
+
+</body>
+</html>
